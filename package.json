@@ -1,0 +1,23 @@
+{
+  "name": "ios26-light-card",
+  "version": "1.0.0",
+  "description": "完全还原iOS 26未来主义风格的Home Assistant灯光卡片",
+  "main": "ios26-light-card.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "home-assistant",
+    "hacs",
+    "lovelace",
+    "custom-card",
+    "light",
+    "ios26"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/ios26-light-card"
+  }
+}

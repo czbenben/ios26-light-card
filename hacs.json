@@ -1,0 +1,19 @@
+{
+  "name": "iOS26 Light Card",
+  "render_readme": true,
+  "filename": "ios26-light-card.js",
+  "country": "CN",
+  "homeassistant": "2021.12.0",
+  "zip_release": true,
+  "filename": "ios26-light-card.js",
+  "persistent": false,
+  "domains": [
+    "light"
+  ],
+  "iot_class": "local_polling",
+  "documentation": "https://github.com/yourusername/ios26-light-card/blob/main/README.md",
+  "issue_tracker": "https://github.com/yourusername/ios26-light-card/issues",
+  "codeowners": [
+    "@czbenben"
+  ]
+}
