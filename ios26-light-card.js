@@ -52,13 +52,9 @@ class IOS26LightCard extends HTMLElement {
   }
 
   subscribeToUpdates() {
-    // 订阅所有实体状态
-    this.entities.forEach(entity => {
-      this.hass.subscribeUpdates((newState) => {
-        this.hueStates.set(entity, newState);
-        this.updateCard();
-      }, entity);
-    });
+    // Home Assistant 2025.12+ 不需要手动订阅
+    // 状态更新通过 set hass() 自动处理
+    // 这个方法保留为兼容性占位符
   }
 
   set hass(hass) {
