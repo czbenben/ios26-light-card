@@ -6,12 +6,40 @@
 class IOS26LightCard extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    this._shadowRoot = this.attachShadow({ mode: 'closed' });
     this.brightness = 100;
     this.colorTemp = 370;
     this.color = { hue: 0, saturation: 100 };
     this.isExpanded = false;
     this.hueStates = new Map(); // 存储每个灯的状态
+  }
+
+  /**
+   * Sanitize a string for safe insertion into HTML.
+   * Prevents XSS by escaping HTML special characters.
+   */
+  _escapeHtml(str) {
+    if (typeof str !== 'string') return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  /**
+   * Validate that a string matches expected patterns.
+   */
+  _validateIcon(icon) {
+    if (typeof icon !== 'string') return 'mdi:lightbulb';
+    // Icons must match mdi:icon-name pattern
+    if (!/^[a-z]+:[a-z0-9-]+$/i.test(icon)) return 'mdi:lightbulb';
+    return icon;
+  }
+
+  _validateGradient(gradient) {
+    if (typeof gradient !== 'string') return 'from-amber-200 via-orange-400 to-rose-600';
+    // Only allow alphanumeric, hyphens, and spaces (Tailwind class names)
+    if (!/^[a-zA-Z0-9\- ]+$/.test(gradient)) return 'from-amber-200 via-orange-400 to-rose-600';
+    return gradient;
   }
 
   setConfig(config) {
@@ -27,10 +55,20 @@ class IOS26LightCard extends HTMLElement {
       ? (Array.isArray(config.entities) ? config.entities : [config.entities])
       : [config.entity];
 
+    // Validate entity IDs (must match domain.object_id pattern)
+    this.entities = this.entities.filter(e => {
+      if (typeof e !== 'string') return false;
+      return /^[a-z_]+\.[a-z0-9_]+$/i.test(e);
+    });
+
+    if (this.entities.length === 0) {
+      throw new Error('没有有效的实体ID');
+    }
+
     this.config.name = config.name || this.getDefaultName();
-    this.config.icon = config.icon || 'mdi:lightbulb';
+    this.config.icon = this._validateIcon(config.icon || 'mdi:lightbulb');
     this.config.room = config.room || '未分类';
-    this.config.gradient = config.gradient || 'from-amber-200 via-orange-400 to-rose-600';
+    this.config.gradient = this._validateGradient(config.gradient || 'from-amber-200 via-orange-400 to-rose-600');
   }
 
   getDefaultName() {
@@ -106,7 +144,7 @@ class IOS26LightCard extends HTMLElement {
   }
 
   updateCard() {
-    const card = this.shadowRoot.querySelector('.ios26-card');
+    const card = this._shadowRoot.querySelector('.ios26-card');
     if (!card) return;
 
     const isOn = this.isAnyLightOn();
@@ -122,13 +160,13 @@ class IOS26LightCard extends HTMLElement {
     }
 
     // 更新亮度显示
-    const brightnessDisplay = this.shadowRoot.querySelector('.brightness-value');
+    const brightnessDisplay = this._shadowRoot.querySelector('.brightness-value');
     if (brightnessDisplay) {
       brightnessDisplay.textContent = Math.round(brightness / 255 * 100);
     }
 
     // 更新滑块
-    const slider = this.shadowRoot.querySelector('.brightness-slider');
+    const slider = this._shadowRoot.querySelector('.brightness-slider');
     if (slider) {
       slider.value = brightness;
     }
@@ -141,7 +179,7 @@ class IOS26LightCard extends HTMLElement {
     const state = this.getMainState();
     if (!state || state.state !== 'on') return;
 
-    const preview = this.shadowRoot.querySelector('.color-preview');
+    const preview = this._shadowRoot.querySelector('.color-preview');
     if (!preview) return;
 
     let color = '';
@@ -239,8 +277,8 @@ class IOS26LightCard extends HTMLElement {
 
   toggleExpand() {
     this.isExpanded = !this.isExpanded;
-    const controls = this.shadowRoot.querySelector('.expanded-controls');
-    const icon = this.shadowRoot.querySelector('.expand-icon');
+    const controls = this._shadowRoot.querySelector('.expanded-controls');
+    const icon = this._shadowRoot.querySelector('.expand-icon');
 
     if (this.isExpanded) {
       controls.style.maxHeight = controls.scrollHeight + 'px';
@@ -254,9 +292,9 @@ class IOS26LightCard extends HTMLElement {
   }
 
   render() {
-    this.shadowRoot.innerHTML = `
+    this._shadowRoot.innerHTML = `
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;400;700;900&display=swap');
+        /* System font stack - avoids external CDN dependency and potential supply-chain risk */
 
         :host {
           display: block;
@@ -531,14 +569,14 @@ class IOS26LightCard extends HTMLElement {
         <div class="card-content">
           <div class="card-header">
             <div class="icon-container">
-              <ha-icon icon="${this.config.icon}"></ha-icon>
+              <ha-icon icon="${this._escapeHtml(this.config.icon)}"></ha-icon>
             </div>
             <div class="status-indicator"></div>
           </div>
 
           <div class="device-info">
-            <h3>${this.config.name}</h3>
-            <p>${this.config.room} · <span class="status-text">静默</span></p>
+            <h3>${this._escapeHtml(this.config.name)}</h3>
+            <p>${this._escapeHtml(this.config.room)} · <span class="status-text">静默</span></p>
           </div>
 
           <div class="expanded-controls">
@@ -566,8 +604,8 @@ class IOS26LightCard extends HTMLElement {
             ${this.entities.length > 1 ? `
               <div class="lights-grid">
                 ${this.entities.map(entity => `
-                  <div class="light-item" data-entity="${entity}">
-                    <div class="light-item-name">${entity.replace(/^light\./, '').replace(/_/g, ' ')}</div>
+                  <div class="light-item" data-entity="${this._escapeHtml(entity)}">
+                    <div class="light-item-name">${this._escapeHtml(entity.replace(/^light\./, '').replace(/_/g, ' '))}</div>
                     <div class="light-item-status">离线</div>
                   </div>
                 `).join('')}
@@ -582,7 +620,7 @@ class IOS26LightCard extends HTMLElement {
   }
 
   attachEventListeners() {
-    const card = this.shadowRoot.querySelector('.ios26-card');
+    const card = this._shadowRoot.querySelector('.ios26-card');
 
     // 点击卡片切换开关和展开
     card.addEventListener('click', (e) => {
@@ -604,13 +642,13 @@ class IOS26LightCard extends HTMLElement {
     });
 
     // 亮度滑块
-    const slider = this.shadowRoot.querySelector('.brightness-slider');
+    const slider = this._shadowRoot.querySelector('.brightness-slider');
     slider.addEventListener('input', (e) => {
       this.setBrightness(parseInt(e.target.value));
     });
 
     // 颜色按钮
-    const colorBtns = this.shadowRoot.querySelectorAll('.color-btn');
+    const colorBtns = this._shadowRoot.querySelectorAll('.color-btn');
     colorBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
         const action = e.target.dataset.action;
@@ -624,7 +662,7 @@ class IOS26LightCard extends HTMLElement {
 
     // 多灯控组
     if (this.entities.length > 1) {
-      const lightItems = this.shadowRoot.querySelectorAll('.light-item');
+      const lightItems = this._shadowRoot.querySelectorAll('.light-item');
       lightItems.forEach(item => {
         item.addEventListener('click', (e) => {
           e.stopPropagation();
